@@ -10,7 +10,7 @@ const Cows = () => {
     notes: ""
   })
   useEffect(() => {
-    fetch("http://localhost:8000/api/cow-records/")
+    fetch("https://farm-records-backend.onrender.com/api/cow-records/")
       .then(res => res.json())
       .then(data => setRecords(data))
   }

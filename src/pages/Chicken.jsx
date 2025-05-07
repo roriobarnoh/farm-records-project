@@ -10,7 +10,7 @@ function Chicken() {
     notes: ""
   });
   useEffect(() => {
-    fetch("http://localhost:8000/api/chicken-records/")
+    fetch("https://farm-records-backend.onrender.com/api/chicken-records/")
       .then(res => res.json())
       .then(data => setRecords(data));
   }, []);

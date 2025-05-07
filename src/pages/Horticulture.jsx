@@ -12,7 +12,7 @@ const Horticulture = () => {
     notes: ""
   })
   useEffect(() => {
-    fetch("http://localhost:8000/api/horticulture-records/")
+    fetch("https://farm-records-backend.onrender.com/api/horticulture-records/")
       .then(res => res.json())
       .then(data => setRecords(data))
   }, [])
