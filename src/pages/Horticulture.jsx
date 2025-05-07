@@ -22,7 +22,7 @@ const Horticulture = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      const response = await fetch("http://localhost:8000/api/horticulture-records/", {
+      const response = await fetch("https://farm-records-backend.onrender.com/api/horticulture-records/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

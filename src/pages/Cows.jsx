@@ -21,7 +21,7 @@ const Cows = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      const response = await fetch("http://localhost:8000/api/cow-records/", {
+      const response = await fetch("https://farm-records-backend.onrender.com/api/cow-records/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

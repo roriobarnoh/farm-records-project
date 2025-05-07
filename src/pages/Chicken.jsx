@@ -22,7 +22,7 @@ function Chicken() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-        const response = await fetch("http://localhost:8000/api/chicken-records/", {
+        const response = await fetch("https://farm-records-backend.onrender.com/api/chicken-records/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
