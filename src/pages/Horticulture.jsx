@@ -1,7 +1,7 @@
-import React, {useState, useEffect} from 'react'
+import React, { useState, useEffect } from 'react';
 
 const Horticulture = () => {
-  const [records, setRecords] = useState([])
+  const [records, setRecords] = useState([]);
   const [form, setForm] = useState({
     crop_name: "",
     crop_type: "",
@@ -10,17 +10,30 @@ const Horticulture = () => {
     quantity: "",
     unit: "",
     notes: ""
-  })
+  });
+
+  const [selectedYear, setSelectedYear] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+
   useEffect(() => {
     fetch("https://farm-records-backend.onrender.com/api/horticulture-records/")
       .then(res => res.json())
-      .then(data => setRecords(data))
-  }, [])
+      .then(data => {
+        setRecords(data);
+        if (data.length > 0) {
+          const first = new Date(data[0].planting_date);
+          setSelectedYear(first.getFullYear().toString());
+          setSelectedMonth(first.toLocaleString('default', { month: 'long' }));
+        }
+      });
+  }, []);
+
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
-  }
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
       const response = await fetch("https://farm-records-backend.onrender.com/api/horticulture-records/", {
         method: "POST",
@@ -28,10 +41,12 @@ const Horticulture = () => {
           "Content-Type": "application/json"
         },
         body: JSON.stringify(form)
-      })
-      if (!response.ok) throw new Error("Failed to submit")
-      const data = await response.json()
-      setRecords([data, ...records])
+      });
+
+      if (!response.ok) throw new Error("Failed to submit");
+
+      const data = await response.json();
+      setRecords([data, ...records]);
       setForm({
         crop_name: "",
         crop_type: "",
@@ -40,19 +55,41 @@ const Horticulture = () => {
         quantity: "",
         unit: "",
         notes: ""
-      })
+      });
+
+      const date = new Date(data.planting_date);
+      setSelectedYear(date.getFullYear().toString());
+      setSelectedMonth(date.toLocaleString('default', { month: 'long' }));
     } catch (error) {
-      console.error("Error:", error)
+      console.error("Error:", error);
     }
-  }
+  };
+
   const cropTypes = ["Fruit", "Vegetable", "Herb", "Flower", "Other"];
+
+  const getMonthName = (dateStr) => new Date(dateStr).toLocaleString('default', { month: 'long' });
+  const getYear = (dateStr) => new Date(dateStr).getFullYear().toString();
+
+  const grouped = records.reduce((acc, rec) => {
+    const year = getYear(rec.planting_date);
+    const month = getMonthName(rec.planting_date);
+    if (!acc[year]) acc[year] = {};
+    if (!acc[year][month]) acc[year][month] = [];
+    acc[year][month].push(rec);
+    return acc;
+  }, {});
+
+  const years = Object.keys(grouped).sort((a, b) => b - a);
+
   return (
     <div>
       <h1 className='text-success mb-4'>Horticulture Records</h1>
+
+      {/* Form */}
       <form onSubmit={handleSubmit} className='mb-4'>
-        <div className="row gap-3">
+        <div className="row g-3">
           <div className="col-md-3">
-            <label htmlFor="crop_name" className="form-label">Crop Name</label>
+            <label className="form-label">Crop Name</label>
             <input
               type='text'
               name='crop_name'
@@ -63,7 +100,8 @@ const Horticulture = () => {
             />
           </div>
           <div className="col-md-3">
-            <select name="crop_type" value={form.crop_type} onChange={handleChange}>
+            <label className="form-label">Crop Type</label>
+            <select name="crop_type" value={form.crop_type} onChange={handleChange} className="form-control">
               <option value="">Select Crop Type</option>
               {cropTypes.map((type, index) => (
                 <option key={index} value={type}>{type}</option>
@@ -71,7 +109,7 @@ const Horticulture = () => {
             </select>
           </div>
           <div className="col-md-3">
-            <label htmlFor="planting_date" className='form-label'>Planting Date</label>
+            <label className='form-label'>Planting Date</label>
             <input
               type='date'
               name='planting_date'
@@ -82,7 +120,7 @@ const Horticulture = () => {
             />
           </div>
           <div className="col-md-3">
-            <label htmlFor="harvest_date" className='form-label'>Harvest Date</label>
+            <label className='form-label'>Harvest Date</label>
             <input
               type='date'
               name='harvest_date'
@@ -93,7 +131,7 @@ const Horticulture = () => {
             />
           </div>
           <div className="col-md-3">
-            <label htmlFor="quantity" className='form-label'>Quantity (kg)</label>
+            <label className='form-label'>Quantity</label>
             <input
               type='number'
               name='quantity'
@@ -104,16 +142,16 @@ const Horticulture = () => {
             />
           </div>
           <div className="col-md-3">
-            <label htmlFor="unit" className='form-label'>Unit</label>
-            <select name="unit" value={form.unit} onChange={handleChange}>
+            <label className='form-label'>Unit</label>
+            <select name="unit" value={form.unit} onChange={handleChange} className="form-control">
               <option value="">Select Unit</option>
               <option value="kg">kg</option>
               <option value="lbs">lbs</option>
               <option value="pieces">pieces</option>
             </select>
           </div>
-          <div className="col-md-3">
-            <label htmlFor="notes" className='form-label'>Notes</label>
+          <div className="col-md-6">
+            <label className='form-label'>Notes</label>
             <textarea
               name='notes'
               className='form-control'
@@ -127,9 +165,51 @@ const Horticulture = () => {
           </div>
         </div>
       </form>
-      {/* Add a table or list to display the records here */}
-      {records.length > 0 && (
-        <div className="table-responsive">
+
+      {/* Year Buttons */}
+      {years.length > 0 && (
+        <div className="mb-3">
+          <h5>Select Year:</h5>
+          <div className="d-flex flex-wrap gap-2">
+            {years.map((year) => (
+              <button
+                key={year}
+                className={`btn ${selectedYear === year ? "btn-success" : "btn-outline-success"}`}
+                onClick={() => {
+                  setSelectedYear(year);
+                  const months = Object.keys(grouped[year]);
+                  if (months.length > 0) setSelectedMonth(months[0]);
+                }}
+              >
+                {year}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Month Buttons */}
+      {selectedYear && grouped[selectedYear] && (
+        <div className="mb-3">
+          <h5>Select Month:</h5>
+          <div className="d-flex flex-wrap gap-2">
+            {Object.keys(grouped[selectedYear]).map((month) => (
+              <button
+                key={month}
+                className={`btn ${selectedMonth === month ? "btn-primary" : "btn-outline-primary"}`}
+                onClick={() => setSelectedMonth(month)}
+              >
+                {month}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Display Records Table */}
+      {selectedYear && selectedMonth && grouped[selectedYear]?.[selectedMonth] && (
+        <div className="table-responsive mt-4">
+          <h4 className="text-primary">{selectedMonth} {selectedYear} Records</h4>
           <table className="table table-striped table-bordered">
             <thead>
               <tr>
@@ -143,7 +223,7 @@ const Horticulture = () => {
               </tr>
             </thead>
             <tbody>
-              {records.map((record, index) => (
+              {grouped[selectedYear][selectedMonth].map((record, index) => (
                 <tr key={index}>
                   <td>{record.crop_name}</td>
                   <td>{record.crop_type}</td>
@@ -159,7 +239,7 @@ const Horticulture = () => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default Horticulture
+export default Horticulture;
