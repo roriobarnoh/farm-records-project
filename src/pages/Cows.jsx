@@ -9,6 +9,7 @@ const Cows = () => {
     feed: "",
     notes: "",
   });
+  const [selectedYear, setSelectedYear] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
 
   useEffect(() => {
@@ -16,8 +17,11 @@ const Cows = () => {
       .then((res) => res.json())
       .then((data) => {
         setRecords(data);
-        const firstMonth = data.length > 0 ? getMonthName(data[0].date) : "";
-        setSelectedMonth(firstMonth);
+        if (data.length > 0) {
+          const firstDate = new Date(data[0].date);
+          setSelectedYear(firstDate.getFullYear().toString());
+          setSelectedMonth(firstDate.toLocaleString("default", { month: "long" }));
+        }
       });
   }, []);
 
@@ -32,9 +36,7 @@ const Cows = () => {
         "https://farm-records-backend.onrender.com/api/cow-records/",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
         }
       );
@@ -45,8 +47,9 @@ const Cows = () => {
       setRecords([data, ...records]);
       setForm({ cows: "", milk: "", date: "", feed: "", notes: "" });
 
-      const month = getMonthName(data.date);
-      setSelectedMonth(month);
+      const dateObj = new Date(data.date);
+      setSelectedYear(dateObj.getFullYear().toString());
+      setSelectedMonth(dateObj.toLocaleString("default", { month: "long" }));
     } catch (error) {
       console.error("Error:", error);
     }
@@ -57,15 +60,21 @@ const Cows = () => {
     return date.toLocaleString("default", { month: "long" });
   };
 
-  // Group records by month
-  const groupedByMonth = records.reduce((acc, rec) => {
+  const getYear = (dateStr) => {
+    return new Date(dateStr).getFullYear().toString();
+  };
+
+  // Group records by year and then by month
+  const groupedByYearMonth = records.reduce((acc, rec) => {
+    const year = getYear(rec.date);
     const month = getMonthName(rec.date);
-    if (!acc[month]) acc[month] = [];
-    acc[month].push(rec);
+    if (!acc[year]) acc[year] = {};
+    if (!acc[year][month]) acc[year][month] = [];
+    acc[year][month].push(rec);
     return acc;
   }, {});
 
-  const monthNames = Object.keys(groupedByMonth);
+  const years = Object.keys(groupedByYearMonth).sort((a, b) => b - a); // descending order
 
   return (
     <div>
@@ -75,9 +84,7 @@ const Cows = () => {
       <form onSubmit={handleSubmit} className="mb-4">
         <div className="row gap-3">
           <div className="col-md-3">
-            <label htmlFor="cows" className="form-label">
-              Number of cows
-            </label>
+            <label className="form-label">Number of cows</label>
             <input
               type="number"
               name="cows"
@@ -88,9 +95,7 @@ const Cows = () => {
             />
           </div>
           <div className="col-md-3">
-            <label htmlFor="milk" className="form-label">
-              Milk (Litres)
-            </label>
+            <label className="form-label">Milk (Litres)</label>
             <input
               type="number"
               name="milk"
@@ -101,9 +106,7 @@ const Cows = () => {
             />
           </div>
           <div className="col-md-3">
-            <label htmlFor="date" className="form-label">
-              Date
-            </label>
+            <label className="form-label">Date</label>
             <input
               type="date"
               name="date"
@@ -114,9 +117,7 @@ const Cows = () => {
             />
           </div>
           <div className="col-md-3">
-            <label htmlFor="feed" className="form-label">
-              Feeds Consumed (kg)
-            </label>
+            <label className="form-label">Feeds Consumed (kg)</label>
             <input
               type="number"
               name="feed"
@@ -127,9 +128,7 @@ const Cows = () => {
             />
           </div>
           <div className="col-md-12">
-            <label htmlFor="notes" className="form-label">
-              Notes
-            </label>
+            <label className="form-label">Notes</label>
             <textarea
               name="notes"
               className="form-control"
@@ -146,16 +145,40 @@ const Cows = () => {
         </div>
       </form>
 
-      {/* Month Selector */}
-      {monthNames.length > 0 && (
+      {/* Year Buttons */}
+      {years.length > 0 && (
+        <div className="mb-3">
+          <h5>Select Year:</h5>
+          <div className="d-flex flex-wrap gap-2">
+            {years.map((year) => (
+              <button
+                key={year}
+                className={`btn ${
+                  selectedYear === year ? "btn-success" : "btn-outline-success"
+                }`}
+                onClick={() => {
+                  setSelectedYear(year);
+                  const months = Object.keys(groupedByYearMonth[year]);
+                  if (months.length > 0) setSelectedMonth(months[0]);
+                }}
+              >
+                {year}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Month Buttons */}
+      {selectedYear && groupedByYearMonth[selectedYear] && (
         <div className="mb-3">
           <h5>Select Month:</h5>
           <div className="d-flex flex-wrap gap-2">
-            {monthNames.map((month) => (
+            {Object.keys(groupedByYearMonth[selectedYear]).map((month) => (
               <button
                 key={month}
                 className={`btn ${
-                  selectedMonth === month ? "btn-success" : "btn-outline-success"
+                  selectedMonth === month ? "btn-primary" : "btn-outline-primary"
                 }`}
                 onClick={() => setSelectedMonth(month)}
               >
@@ -166,36 +189,41 @@ const Cows = () => {
         </div>
       )}
 
-      {/* Display Table for Selected Month */}
-      {selectedMonth && groupedByMonth[selectedMonth] && (
-        <div className="table-responsive mt-4">
-          <h4 className="text-primary">{selectedMonth} Records</h4>
-          <table className="table table-striped table-bordered">
-            <thead className="table-success">
-              <tr>
-                <th>#</th>
-                <th>Date</th>
-                <th>Cows</th>
-                <th>Milk</th>
-                <th>Feeds (kg)</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {groupedByMonth[selectedMonth].map((rec, index) => (
-                <tr key={index}>
-                  <td>{index + 1}</td>
-                  <td>{rec.date}</td>
-                  <td>{rec.cows}</td>
-                  <td>{rec.milk}</td>
-                  <td>{rec.feed}</td>
-                  <td>{rec.notes}</td>
+      {/* Table Display */}
+      {selectedYear &&
+        selectedMonth &&
+        groupedByYearMonth[selectedYear] &&
+        groupedByYearMonth[selectedYear][selectedMonth] && (
+          <div className="table-responsive mt-4">
+            <h4 className="text-primary">
+              {selectedMonth} {selectedYear} Records
+            </h4>
+            <table className="table table-striped table-bordered">
+              <thead className="table-success">
+                <tr>
+                  <th>#</th>
+                  <th>Date</th>
+                  <th>Cows</th>
+                  <th>Milk</th>
+                  <th>Feeds (kg)</th>
+                  <th>Notes</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {groupedByYearMonth[selectedYear][selectedMonth].map((rec, index) => (
+                  <tr key={index}>
+                    <td>{index + 1}</td>
+                    <td>{rec.date}</td>
+                    <td>{rec.cows}</td>
+                    <td>{rec.milk}</td>
+                    <td>{rec.feed}</td>
+                    <td>{rec.notes}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
     </div>
   );
 };
