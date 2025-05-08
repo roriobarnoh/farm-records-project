@@ -201,4 +201,3 @@ const Cows = () => {
 };
 
 export default Cows;
-
